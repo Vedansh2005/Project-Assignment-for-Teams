@@ -16,15 +16,19 @@ define('ADMIN_PASSWORD', 'admin123');
 // Database connection
 function getDBConnection() {
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
         if ($conn->connect_error) {
             // If database doesn't exist, create it
-            $conn = new mysqli('localhost', 'root', '','teamflow');
-            $conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME);
-            $conn->select_db(DB_NAME);
-            
-            // Create tables
-            createTables($conn);
+            $conn = @new mysqli('localhost', 'root', '', 'teamflow');
+            if (!$conn->connect_error) {
+                @$conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME);
+                @$conn->select_db(DB_NAME);
+                
+                // Create tables
+                createTables($conn);
+            } else {
+                return null;
+            }
         } else {
             createTables($conn);
         }
@@ -37,8 +41,10 @@ function getDBConnection() {
 
 // Create database tables
 function createTables($conn) {
+    if (!$conn) return;
+    
     // Users table
-    $conn->query("CREATE TABLE IF NOT EXISTS users (
+    @$conn->query("CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(50) PRIMARY KEY,
         firstName VARCHAR(100),
         email VARCHAR(100) UNIQUE,
@@ -53,7 +59,7 @@ function createTables($conn) {
     )");
     
     // Projects table
-    $conn->query("CREATE TABLE IF NOT EXISTS projects (
+    @$conn->query("CREATE TABLE IF NOT EXISTS projects (
         id VARCHAR(50) PRIMARY KEY,
         name VARCHAR(200),
         description TEXT,
@@ -64,7 +70,7 @@ function createTables($conn) {
     )");
     
     // Tasks table
-    $conn->query("CREATE TABLE IF NOT EXISTS tasks (
+    @$conn->query("CREATE TABLE IF NOT EXISTS tasks (
         id VARCHAR(50) PRIMARY KEY,
         projectId VARCHAR(50),
         userId VARCHAR(50),
@@ -105,5 +111,4 @@ function writeJSONFile($filename, $data) {
     file_put_contents($filepath, json_encode($data, JSON_PRETTY_PRINT));
     return true;
 }
-?>
 

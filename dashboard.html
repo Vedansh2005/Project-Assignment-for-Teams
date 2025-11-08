@@ -177,7 +177,7 @@
   <div class="header">
     <div class="header-content">
       <h1>User Dashboard</h1>
-      <p>Welcome back, John Doe</p>
+      <p id="welcomeMessage">Loading...</p>
       <div class="header-buttons">
         <a href="messages.html" class="btn">Messages</a>
         <button onclick="handleLogout()" class="btn">Logout</button>
@@ -188,38 +188,16 @@
 
   <div class="container">
     <div class="left-column">
-      <div class="card">
+      <div class="card" id="profileCard">
         <h2>Your Profile</h2>
-        <p><strong>Name:</strong> John Doe</p>
-        <p><strong>Email:</strong> john.doe@company.com</p>
-        <p><strong>Experience:</strong> 5 years</p>
-        <p><strong>Skills:</strong></p>
-        <span class="badge">React</span>
-        <span class="badge">TypeScript</span>
-        <span class="badge">Node.js</span>
-        <span class="badge">UI/UX Design</span>
-        <p style="margin-top: 15px;"><strong>Qualifications:</strong></p>
-        <p>• B.S. Computer Science</p>
-        <p>• AWS Certified</p>
+        <p>Loading profile...</p>
       </div>
     </div>
 
     <div class="right-column">
-      <div class="card">
+      <div class="card" id="progressCard">
         <h2>Your Progress</h2>
-        <div class="stats">
-          <p style="color: #666; font-size: 14px;">Completed</p>
-          <p style="font-size: 36px; font-weight: bold; color: #22c55e; margin: 0;">8</p>
-        </div>
-        <div class="stats">
-          <p style="color: #666; font-size: 14px;">In Progress</p>
-          <p style="font-size: 36px; font-weight: bold; color: #0ea5e9; margin: 0;">3</p>
-        </div>
-        <div class="stats">
-          <p style="color: #666; font-size: 14px;">Pending</p>
-          <p style="font-size: 36px; font-weight: bold; color: #666; margin: 0;">5</p>
-        </div>
-        <div class="clearfix"></div>
+        <p>Loading progress...</p>
       </div>
 
       <div class="card" id="assignedProjectsCard">

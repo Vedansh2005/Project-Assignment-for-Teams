@@ -52,26 +52,56 @@ function loadFromLocalStorage() {
 }
 
 function displayUserData(user) {
-    var header = document.querySelector('.header p');
-    if (header) {
-        header.textContent = 'Welcome back, ' + user.firstName;
+    currentUser = user;
+    
+    // Update welcome message
+    var welcomeMessage = document.getElementById('welcomeMessage');
+    if (welcomeMessage) {
+        welcomeMessage.textContent = 'Welcome back, ' + (user.firstName || user.username || 'User');
     }
     
-    var profileCard = document.querySelector('.left-column .card');
+    // Update profile card
+    var profileCard = document.getElementById('profileCard');
     if (profileCard) {
         var skillsHtml = '';
-        if (user.skills && user.skills.length > 0) {
+        if (user.skills && Array.isArray(user.skills) && user.skills.length > 0) {
             for (var i = 0; i < user.skills.length; i++) {
                 skillsHtml += '<span class="badge">' + user.skills[i] + '</span>';
+            }
+        } else if (typeof user.skills === 'string' && user.skills.trim() !== '') {
+            try {
+                var skillsArray = JSON.parse(user.skills);
+                if (Array.isArray(skillsArray) && skillsArray.length > 0) {
+                    for (var i = 0; i < skillsArray.length; i++) {
+                        skillsHtml += '<span class="badge">' + skillsArray[i] + '</span>';
+                    }
+                } else {
+                    skillsHtml = '<span class="badge">No skills added</span>';
+                }
+            } catch (e) {
+                skillsHtml = '<span class="badge">No skills added</span>';
             }
         } else {
             skillsHtml = '<span class="badge">No skills added</span>';
         }
         
         var qualificationsHtml = '';
-        if (user.qualifications && user.qualifications.length > 0) {
+        if (user.qualifications && Array.isArray(user.qualifications) && user.qualifications.length > 0) {
             for (var i = 0; i < user.qualifications.length; i++) {
                 qualificationsHtml += '<p>• ' + user.qualifications[i] + '</p>';
+            }
+        } else if (typeof user.qualifications === 'string' && user.qualifications.trim() !== '') {
+            try {
+                var qualArray = JSON.parse(user.qualifications);
+                if (Array.isArray(qualArray) && qualArray.length > 0) {
+                    for (var i = 0; i < qualArray.length; i++) {
+                        qualificationsHtml += '<p>• ' + qualArray[i] + '</p>';
+                    }
+                } else {
+                    qualificationsHtml = '<p>No qualifications added</p>';
+                }
+            } catch (e) {
+                qualificationsHtml = '<p>No qualifications added</p>';
             }
         } else {
             qualificationsHtml = '<p>No qualifications added</p>';
@@ -79,8 +109,8 @@ function displayUserData(user) {
         
         profileCard.innerHTML = '<h2>Your Profile <button id="editProfileBtn" class="btn" style="padding: 5px 15px; font-size: 12px; float: right;">Edit</button></h2>' +
                                 '<div class="clearfix"></div>' +
-                                '<p><strong>Name:</strong> ' + user.firstName + '</p>' +
-                                '<p><strong>Email:</strong> ' + user.email + '</p>' +
+                                '<p><strong>Name:</strong> ' + (user.firstName || user.username || 'N/A') + '</p>' +
+                                '<p><strong>Email:</strong> ' + (user.email || 'N/A') + '</p>' +
                                 '<p><strong>Experience:</strong> ' + (user.experience || '0') + ' years</p>' +
                                 '<p><strong>Skills:</strong></p>' + skillsHtml +
                                 '<p style="margin-top: 15px;"><strong>Qualifications:</strong></p>' + qualificationsHtml;
@@ -315,19 +345,90 @@ function loadMyTasks() {
             });
             console.log('Found user:', user);
             if (user && user.id) {
-                console.log('Loading tasks for user ID:', user.id);
-                // Load tasks for this user
-                fetch('tasks.php?action=getAll&userId=' + encodeURIComponent(user.id))
+                console.log('Loading tasks for user ID:', user.id, 'Type:', typeof user.id);
+                // Load tasks for this user - try both string and number format
+                var userId = String(user.id);
+                console.log('Fetching tasks with userId:', userId);
+                
+                // Fetch tasks for this specific user
+                fetch('tasks.php?action=getAll&userId=' + encodeURIComponent(userId))
                 .then(function(response) { 
+                    // Check if response is ok
                     if (!response.ok) {
-                        throw new Error('Failed to fetch tasks');
+                        // Try to get error message from response
+                        return response.text().then(function(text) {
+                            console.error('API Error Response:', text);
+                            throw new Error('Failed to fetch tasks: ' + response.status);
+                        });
                     }
+                    
+                    // Check content type
+                    var contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        return response.text().then(function(text) {
+                            console.error('Non-JSON response:', text);
+                            throw new Error('Server returned non-JSON response');
+                        });
+                    }
+                    
                     return response.json(); 
                 })
                 .then(function(taskResult) {
-                    console.log('Tasks result:', taskResult);
-                    var tasks = taskResult.success ? (taskResult.tasks || []) : [];
-                    console.log('Tasks found:', tasks.length);
+                    // Validate response structure
+                    if (!taskResult) {
+                        console.error('Empty response from server');
+                        displayMyTasks([]);
+                        return;
+                    }
+                    
+                    var tasks = [];
+                    
+                    if (taskResult.success && Array.isArray(taskResult.tasks)) {
+                        tasks = taskResult.tasks;
+                    } else if (taskResult.success === false) {
+                        console.error('API returned error:', taskResult.message || 'Unknown error');
+                        displayMyTasks([]);
+                        return;
+                    }
+                    
+                    // If no tasks found with userId filter, try fetching all and filtering client-side
+                    // This is a fallback in case there's a userId mismatch issue
+                    if (tasks.length === 0) {
+                        console.log('No tasks found with userId filter, trying fallback...');
+                        return fetch('tasks.php?action=getAll')
+                        .then(function(response) { 
+                            if (!response.ok) {
+                                throw new Error('Fallback request failed: ' + response.status);
+                            }
+                            return response.json(); 
+                        })
+                        .then(function(allTasksResult) {
+                            if (allTasksResult && allTasksResult.success && Array.isArray(allTasksResult.tasks)) {
+                                // Filter client-side by userId
+                                tasks = allTasksResult.tasks.filter(function(task) {
+                                    if (!task || !task.userId) return false;
+                                    // Try multiple comparison methods
+                                    var taskUserId = String(task.userId).trim();
+                                    var searchUserId = String(userId).trim();
+                                    return taskUserId === searchUserId;
+                                });
+                                console.log('Found ' + tasks.length + ' tasks after client-side filtering');
+                            }
+                            return tasks;
+                        })
+                        .catch(function(fallbackError) {
+                            console.error('Fallback fetch failed:', fallbackError);
+                            return [];
+                        });
+                    }
+                    
+                    return tasks;
+                })
+                .then(function(tasks) {
+                    if (!Array.isArray(tasks)) {
+                        tasks = [];
+                    }
+                    console.log('Displaying ' + tasks.length + ' tasks for user:', userId);
                     displayMyTasks(tasks);
                 })
                 .catch(function(error) {
@@ -335,7 +436,7 @@ function loadMyTasks() {
                     displayMyTasks([]);
                 });
             } else {
-                console.error('User not found or no user ID');
+                console.error('User not found or no user ID. User object:', user);
                 displayMyTasks([]);
             }
         } else {
@@ -352,14 +453,19 @@ function loadMyTasks() {
 function displayMyTasks(tasks) {
     var tasksCard = document.getElementById('myTasksCard');
     if (!tasksCard) {
-        console.error('myTasksCard element not found');
         return;
     }
     
-    console.log('Displaying tasks:', tasks);
+    // Ensure tasks is an array
+    if (!Array.isArray(tasks)) {
+        tasks = [];
+    }
     
-    if (!tasks || tasks.length === 0) {
-        tasksCard.innerHTML = '<h2>My Tasks</h2><p style="color: #666;">No tasks assigned to you yet. Contact your admin to get assigned tasks.</p>';
+    // Update progress stats based on actual tasks
+    updateProgressStats(tasks);
+    
+    if (tasks.length === 0) {
+        tasksCard.innerHTML = '<h2>My Tasks</h2><p style="color: #666; padding: 20px;">No tasks assigned to you yet. Contact your admin to get assigned tasks.</p>';
         return;
     }
     
@@ -399,6 +505,44 @@ function displayMyTasks(tasks) {
                     '</div>';
     }
     tasksCard.innerHTML = tasksHtml;
+}
+
+// Update progress statistics based on tasks
+function updateProgressStats(tasks) {
+    var progressCard = document.getElementById('progressCard');
+    if (!progressCard) return;
+    
+    if (!tasks || tasks.length === 0) {
+        progressCard.innerHTML = '<h2>Your Progress</h2>' +
+                                '<div class="stats"><p style="color: #666; font-size: 14px;">Completed</p><p style="font-size: 36px; font-weight: bold; color: #22c55e; margin: 0;">0</p></div>' +
+                                '<div class="stats"><p style="color: #666; font-size: 14px;">In Progress</p><p style="font-size: 36px; font-weight: bold; color: #0ea5e9; margin: 0;">0</p></div>' +
+                                '<div class="stats"><p style="color: #666; font-size: 14px;">Pending</p><p style="font-size: 36px; font-weight: bold; color: #666; margin: 0;">0</p></div>' +
+                                '<div class="clearfix"></div>';
+        return;
+    }
+    
+    var completed = 0;
+    var inProgress = 0;
+    var pending = 0;
+    
+    for (var i = 0; i < tasks.length; i++) {
+        var task = tasks[i];
+        if (!task || !task.status) continue;
+        
+        if (task.status === 'completed') {
+            completed++;
+        } else if (task.status === 'in_progress') {
+            inProgress++;
+        } else {
+            pending++;
+        }
+    }
+    
+    progressCard.innerHTML = '<h2>Your Progress</h2>' +
+                            '<div class="stats"><p style="color: #666; font-size: 14px;">Completed</p><p style="font-size: 36px; font-weight: bold; color: #22c55e; margin: 0;">' + completed + '</p></div>' +
+                            '<div class="stats"><p style="color: #666; font-size: 14px;">In Progress</p><p style="font-size: 36px; font-weight: bold; color: #0ea5e9; margin: 0;">' + inProgress + '</p></div>' +
+                            '<div class="stats"><p style="color: #666; font-size: 14px;">Pending</p><p style="font-size: 36px; font-weight: bold; color: #666; margin: 0;">' + pending + '</p></div>' +
+                            '<div class="clearfix"></div>';
 }
 
 // Make function globally accessible
@@ -561,16 +705,36 @@ function displayProjectTasks(projectIds, allProjects) {
         }
         
         var projectId = projectIds[projectIndex];
-        fetch('tasks.php?action=getByProject&projectId=' + projectId)
-        .then(function(response) { return response.json(); })
+        fetch('tasks.php?action=getByProject&projectId=' + encodeURIComponent(projectId))
+        .then(function(response) {
+            if (!response.ok) {
+                return response.text().then(function(text) {
+                    console.error('API Error Response for project:', text);
+                    throw new Error('Failed to fetch tasks: ' + response.status);
+                });
+            }
+            
+            // Check content type
+            var contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(function(text) {
+                    console.error('Non-JSON response:', text);
+                    throw new Error('Server returned non-JSON response');
+                });
+            }
+            
+            return response.json();
+        })
         .then(function(result) {
-            if (result.success && result.tasks) {
+            if (result && result.success && Array.isArray(result.tasks)) {
                 // Add project name to each task
                 var project = allProjects.find(function(p) { return p.id === projectId; });
                 for (var k = 0; k < result.tasks.length; k++) {
                     result.tasks[k].projectName = project ? project.name : 'Unknown Project';
                     allTasks.push(result.tasks[k]);
                 }
+            } else if (result && result.success === false) {
+                console.error('API returned error for project:', result.message || 'Unknown error');
             }
             projectIndex++;
             loadNextProject();

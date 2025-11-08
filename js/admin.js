@@ -545,9 +545,11 @@ window.deleteTask = function(taskId) {
     .then(function(result) {
         if (result.success) {
             loadTasks();
+            // Also reload users table to update task counts
+            loadUsers();
             alert('Task deleted successfully!');
         } else {
-            alert('Error deleting task: ' + result.message);
+            alert('Error deleting task: ' + (result.message || 'Unknown error'));
         }
     })
     .catch(function(error) {
@@ -906,9 +908,11 @@ function saveNewTask() {
         if (result.success) {
             closeNewTaskModal();
             loadTasks();
+            // Also reload users table to update task counts
+            loadUsers();
             alert('Task created successfully!');
         } else {
-            alert('Error creating task: ' + result.message);
+            alert('Error creating task: ' + (result.message || 'Unknown error'));
         }
     })
     .catch(function(error) {
