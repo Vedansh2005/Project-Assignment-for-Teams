@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Dashboard - TeamFlow</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background-color: white;
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .header-content {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header h1 {
+      margin: 0;
+      color: #333;
+    }
+    .header p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .header-buttons {
+      float: right;
+      margin-top: -50px;
+    }
+    .header-buttons a, .header-buttons button {
+      margin-left: 10px;
+    }
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .left-column {
+      width: 30%;
+      float: left;
+      margin-right: 3%;
+    }
+    .right-column {
+      width: 67%;
+      float: left;
+    }
+    .card {
+      background-color: white;
+      padding: 20px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .stats {
+      width: 30%;
+      float: left;
+      text-align: center;
+      padding: 15px;
+    }
+    .stats p {
+      margin: 5px 0;
+    }
+    .task-item {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: #f9f9f9;
+    }
+    .task-item h3 {
+      margin-top: 0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      background-color: #f3f4f6;
+      color: #333;
+      font-size: 12px;
+      margin: 5px 5px 5px 0;
+    }
+    .clearfix:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow: auto;
+    }
+    .modal-content {
+      background-color: white;
+      width: 500px;
+      max-width: 90%;
+      margin: 50px auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      position: relative;
+    }
+    .modal-header {
+      margin-bottom: 20px;
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    .form-group textarea {
+      height: 80px;
+      resize: vertical;
+    }
+    .modal-buttons {
+      text-align: right;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      margin-left: 10px;
+      padding: 8px 20px;
+    }
+    .skill-input {
+      margin-bottom: 10px;
+    }
+    .skill-input input {
+      width: 70%;
+      display: inline-block;
+    }
+    .skill-input button {
+      width: 28%;
+      padding: 8px;
+      display: inline-block;
+      margin-left: 2%;
+    }
+    .skill-tags {
+      margin-top: 10px;
+    }
+    .skill-tag {
+      display: inline-block;
+      background-color: #f3f4f6;
+      padding: 5px 10px;
+      margin: 5px 5px 5px 0;
+      font-size: 14px;
+    }
+    .skill-tag span {
+      margin-left: 5px;
+      cursor: pointer;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1>User Dashboard</h1>
+      <p>Welcome back, John Doe</p>
+      <div class="header-buttons">
+        <a href="messages.html" class="btn">Messages</a>
+        <button onclick="handleLogout()" class="btn">Logout</button>
+      </div>
+      <div class="clearfix"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="left-column">
+      <div class="card">
+        <h2>Your Profile</h2>
+        <p><strong>Name:</strong> John Doe</p>
+        <p><strong>Email:</strong> john.doe@company.com</p>
+        <p><strong>Experience:</strong> 5 years</p>
+        <p><strong>Skills:</strong></p>
+        <span class="badge">React</span>
+        <span class="badge">TypeScript</span>
+        <span class="badge">Node.js</span>
+        <span class="badge">UI/UX Design</span>
+        <p style="margin-top: 15px;"><strong>Qualifications:</strong></p>
+        <p>• B.S. Computer Science</p>
+        <p>• AWS Certified</p>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="card">
+        <h2>Your Progress</h2>
+        <div class="stats">
+          <p style="color: #666; font-size: 14px;">Completed</p>
+          <p style="font-size: 36px; font-weight: bold; color: #22c55e; margin: 0;">8</p>
+        </div>
+        <div class="stats">
+          <p style="color: #666; font-size: 14px;">In Progress</p>
+          <p style="font-size: 36px; font-weight: bold; color: #0ea5e9; margin: 0;">3</p>
+        </div>
+        <div class="stats">
+          <p style="color: #666; font-size: 14px;">Pending</p>
+          <p style="font-size: 36px; font-weight: bold; color: #666; margin: 0;">5</p>
+        </div>
+        <div class="clearfix"></div>
+      </div>
+
+      <div class="card" id="assignedProjectsCard">
+        <h2>My Assigned Projects</h2>
+        <p>Loading projects...</p>
+      </div>
+
+      <div class="card" id="myTasksCard">
+        <h2>My Tasks</h2>
+        <p>Loading tasks...</p>
+      </div>
+
+      <div class="card" id="projectTasksCard">
+        <h2>All Project Tasks</h2>
+        <p>Loading project tasks...</p>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="editProfileModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Your Profile</h3>
+      </div>
+      <form id="editProfileForm">
+        <div class="form-group">
+          <label>Experience (in years)</label>
+          <input type="number" id="editExperience" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label>Skills</label>
+          <div class="skill-input">
+            <input type="text" id="editSkillInput" placeholder="Enter a skill">
+            <button type="button" id="addEditSkillBtn">Add</button>
+          </div>
+          <div id="editSkillsList" class="skill-tags"></div>
+        </div>
+        <div class="form-group">
+          <label>Qualifications (one per line)</label>
+          <textarea id="editQualifications" placeholder="e.g., B.S. Computer Science&#10;AWS Certified"></textarea>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" id="cancelEditBtn" class="btn" style="background-color: #666;">Cancel</button>
+          <button type="submit" class="btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

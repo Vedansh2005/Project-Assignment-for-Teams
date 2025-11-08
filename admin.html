@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard - TeamFlow</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background-color: white;
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .header-content {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header h1 {
+      margin: 0;
+      color: #333;
+    }
+    .header p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .header-content {
+      position: relative;
+    }
+    .header-buttons {
+      position: absolute;
+      top: 20px;
+      right: 0;
+    }
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .card {
+      background-color: white;
+      padding: 20px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .tabs {
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      padding: 10px 20px;
+      margin-right: 5px;
+      background-color: #f3f4f6;
+      border: 1px solid #ddd;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background-color: white;
+      border-bottom: 2px solid #0ea5e9;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    table {
+      width: 100%;
+      background-color: white;
+      border-collapse: collapse;
+    }
+    table th, table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      word-wrap: break-word;
+    }
+    table th {
+      background-color: #f9f9f9;
+      font-weight: bold;
+    }
+    .project-box {
+      width: 48%;
+      float: left;
+      margin: 1%;
+      background-color: white;
+      padding: 20px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+    .clearfix:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow: auto;
+    }
+    .modal-content {
+      background-color: white;
+      width: 500px;
+      max-width: 90%;
+      margin: 50px auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      position: relative;
+    }
+    .modal-header {
+      margin-bottom: 20px;
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    .form-group textarea {
+      height: 80px;
+    }
+    .modal-buttons {
+      text-align: right;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      margin-left: 10px;
+      padding: 8px 20px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background-color: #f3f4f6;
+      color: #333;
+      font-size: 12px;
+      margin: 2px;
+    }
+    .user-details {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1>Admin Dashboard</h1>
+      <p>Manage your team and projects</p>
+      <div class="header-buttons">
+        <button onclick="handleLogout()" class="btn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button id="tabUsers" class="active">All Users</button>
+      <button id="tabProjects">Projects</button>
+      <button id="tabAssign">Assign Projects</button>
+      <button id="tabTasks">Assign Tasks</button>
+    </div>
+
+    <div id="users" class="tab-content active">
+      <div class="card">
+        <h2>All Registered Users</h2>
+        <div id="usersList"></div>
+      </div>
+    </div>
+
+    <div id="projects" class="tab-content">
+      <div class="card">
+        <h2>Projects</h2>
+        <button id="newProjectBtn" class="btn" style="margin-bottom: 20px;">Create New Project</button>
+        <div id="projectsList"></div>
+      </div>
+    </div>
+
+    <div id="assign" class="tab-content">
+      <div class="card">
+        <h2>Assign Projects to Users</h2>
+        <div id="assignProjectsList"></div>
+      </div>
+    </div>
+
+    <div id="tasks" class="tab-content">
+      <div class="card">
+        <h2>Task Management</h2>
+        <p style="color: #666; margin-bottom: 20px;">Create and manage tasks for users. You can also assign tasks from the "All Users" or "Projects" tabs.</p>
+        <button id="newTaskBtn" class="btn" style="margin-bottom: 20px;">+ Create New Task</button>
+        <div id="tasksList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Project Modal -->
+  <div id="newProjectModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create New Project</h3>
+      </div>
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="projectName">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="projectDescription"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button id="cancelProjectBtn" class="btn" style="background-color: #666;">Cancel</button>
+        <button id="saveProjectBtn" class="btn">Create Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Project Modal -->
+  <div id="assignProjectModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Assign Project to Users</h3>
+      </div>
+      <div class="form-group">
+        <label>Select Project</label>
+        <select id="assignProjectSelect"></select>
+      </div>
+      <div class="form-group">
+        <label>Select Users (hold Ctrl/Cmd to select multiple)</label>
+        <select id="assignUsersSelect" multiple style="height: 150px;"></select>
+      </div>
+      <div class="modal-buttons">
+        <button id="cancelAssignBtn" class="btn" style="background-color: #666;">Cancel</button>
+        <button id="saveAssignBtn" class="btn">Assign</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Task Modal -->
+  <div id="newTaskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Create New Task</h3>
+      </div>
+      <div class="form-group">
+        <label>Select Project</label>
+        <select id="taskProjectSelect" required></select>
+      </div>
+      <div class="form-group">
+        <label>Select User</label>
+        <select id="taskUserSelect" required></select>
+      </div>
+      <div class="form-group">
+        <label>Task Title</label>
+        <input type="text" id="taskTitle" required>
+      </div>
+      <div class="form-group">
+        <label>Task Description</label>
+        <textarea id="taskDescription"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Task Type</label>
+        <select id="taskType" required>
+          <option value="">Select Task Type</option>
+          <option value="Frontend">Frontend</option>
+          <option value="Backend">Backend</option>
+          <option value="Database">Database</option>
+          <option value="API">API</option>
+          <option value="Testing">Testing</option>
+          <option value="Design">Design</option>
+          <option value="Documentation">Documentation</option>
+          <option value="DevOps">DevOps</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="taskPriority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Due Date (Optional)</label>
+        <input type="date" id="taskDueDate">
+      </div>
+      <div class="modal-buttons">
+        <button id="cancelTaskBtn" class="btn" style="background-color: #666;">Cancel</button>
+        <button id="saveTaskBtn" class="btn">Create Task</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

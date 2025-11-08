@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Messages - TeamFlow</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background-color: white;
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+    .header-content {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header h1 {
+      margin: 0;
+      color: #333;
+    }
+    .header p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 20px auto;
+    }
+    .left-column {
+      width: 30%;
+      float: left;
+      margin-right: 3%;
+    }
+    .right-column {
+      width: 67%;
+      float: left;
+    }
+    .card {
+      background-color: white;
+      padding: 20px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .chat-item {
+      padding: 15px;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      cursor: pointer;
+      background-color: #f9f9f9;
+    }
+    .chat-item:hover {
+      background-color: #f3f4f6;
+    }
+    .chat-item.active {
+      background-color: #e0f2fe;
+      border-color: #0ea5e9;
+    }
+    .message {
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+    }
+    .message.own {
+      background-color: #0ea5e9;
+      color: white;
+      text-align: right;
+    }
+    .message.other {
+      background-color: #f3f4f6;
+    }
+    .message-input {
+      margin-top: 20px;
+    }
+    .message-input input {
+      width: 80%;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    .message-input button {
+      width: 18%;
+      padding: 10px;
+    }
+    .clearfix:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1>Messages</h1>
+      <p>Chat with your teammates</p>
+      <a href="dashboard.html" style="color: #0ea5e9;">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="left-column">
+      <div class="card">
+        <h2>Team Members</h2>
+        <div class="chat-item active">
+          <p style="margin: 0; font-weight: bold;">Jane Smith</p>
+          <p style="margin: 5px 0; color: #666; font-size: 14px;">Let me check the documentation</p>
+        </div>
+        <div class="chat-item">
+          <p style="margin: 0; font-weight: bold;">Mike Johnson</p>
+          <p style="margin: 5px 0; color: #666; font-size: 14px;">Sure, I can help with that</p>
+        </div>
+        <div class="chat-item">
+          <p style="margin: 0; font-weight: bold;">Sarah Williams</p>
+          <p style="margin: 5px 0; color: #666; font-size: 14px;">Meeting at 3 PM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="card">
+        <h2>Jane Smith</h2>
+        <p style="color: #666; font-size: 14px;">Online</p>
+        
+        <div id="messages-container">
+          <div class="message other">
+            <p style="margin: 0; font-weight: bold; font-size: 12px;">Jane Smith</p>
+            <p style="margin: 5px 0;">Hey, do you have time to review the authentication code?</p>
+            <p style="margin: 5px 0; font-size: 12px; color: #666;">10:30 AM</p>
+          </div>
+          <div class="message own">
+            <p style="margin: 5px 0;">Sure! I can take a look now.</p>
+            <p style="margin: 5px 0; font-size: 12px;">10:32 AM</p>
+          </div>
+          <div class="message other">
+            <p style="margin: 0; font-weight: bold; font-size: 12px;">Jane Smith</p>
+            <p style="margin: 5px 0;">Let me check the documentation</p>
+            <p style="margin: 5px 0; font-size: 12px; color: #666;">10:35 AM</p>
+          </div>
+        </div>
+
+        <div class="message-input">
+          <input type="text" id="message-input" placeholder="Type a message...">
+          <button id="send-message" class="btn">Send</button>
+        </div>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/messages.js"></script>
+</body>
+</html>
