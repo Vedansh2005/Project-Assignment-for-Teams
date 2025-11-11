@@ -2,8 +2,7 @@
 
 A simple team management system using only basic PHP, HTML, CSS, and JavaScript.
 
----
-
+---//remove bind_params use mysqli_connect instead of mysqli
 ## 📋 Table of Contents
 
 1. [Quick Start Guide](#quick-start-guide)

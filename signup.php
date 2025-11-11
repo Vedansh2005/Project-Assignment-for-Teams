@@ -24,10 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn = getDBConnection();
         if ($conn) {
             // Check if email exists
-            $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            if ($stmt->get_result()->num_rows > 0) {
+            $email = mysqli_real_escape_string($conn, $email);
+            $result = mysqli_query($conn, "SELECT id FROM users WHERE email = '$email'");
+            if (mysqli_num_rows($result) > 0) {
                 $error = 'Email already registered';
             } else {
                 // Create user
@@ -43,17 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $projectsJson = json_encode([]);
                 $createdAt = date('Y-m-d H:i:s');
                 
-                $stmt = $conn->prepare("INSERT INTO users (id, firstName, email, gender, password, username, experience, skills, qualifications, projects, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("sssssssssss", $id, $firstName, $email, $gender, $password, $username, $experience, $skillsJson, $qualificationsJson, $projectsJson, $createdAt);
+                $firstName = mysqli_real_escape_string($conn, $firstName);
+                $gender = mysqli_real_escape_string($conn, $gender);
+                $password = mysqli_real_escape_string($conn, $password);
+                $username = mysqli_real_escape_string($conn, $username);
+                $experience = mysqli_real_escape_string($conn, $experience);
+                $skillsJson = mysqli_real_escape_string($conn, $skillsJson);
+                $qualificationsJson = mysqli_real_escape_string($conn, $qualificationsJson);
+                $projectsJson = mysqli_real_escape_string($conn, $projectsJson);
                 
-                if ($stmt->execute()) {
+                $query = "INSERT INTO users (id, firstName, email, gender, password, username, experience, skills, qualifications, projects, createdAt) VALUES ('$id', '$firstName', '$email', '$gender', '$password', '$username', '$experience', '$skillsJson', '$qualificationsJson', '$projectsJson', '$createdAt')";
+                
+                if (mysqli_query($conn, $query)) {
                     $success = true;
                 } else {
                     $error = 'Error creating account';
                 }
             }
-            $stmt->close();
-            $conn->close();
+            mysqli_close($conn);
         } else {
             $error = 'Database connection failed';
         }

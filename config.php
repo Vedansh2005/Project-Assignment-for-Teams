@@ -16,20 +16,23 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Database connection
 function getDBConnection() {
-    $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn->connect_error) {
+    $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    if (!$conn || mysqli_connect_error()) {
         // Try to create database if it doesn't exist
-        $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS);
-        if (!$conn->connect_error) {
-            @$conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME . " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            @$conn->select_db(DB_NAME);
+        $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS);
+        if ($conn) {
+            @mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS " . DB_NAME . " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            @mysqli_select_db($conn, DB_NAME);
+            @mysqli_set_charset($conn, "utf8mb4");
+            @mysqli_query($conn, "SET collation_connection = 'utf8mb4_unicode_ci'");
             createTables($conn);
         } else {
             return null;
         }
     } else {
-        // Set charset for connection
-        @$conn->set_charset("utf8mb4");
+        // Set charset and collation for connection
+        @mysqli_set_charset($conn, "utf8mb4");
+        @mysqli_query($conn, "SET collation_connection = 'utf8mb4_unicode_ci'");
         createTables($conn);
     }
     return $conn;
@@ -40,10 +43,10 @@ function createTables($conn) {
     if (!$conn) return;
     
     // Set default charset and collation
-    @$conn->query("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+    @mysqli_query($conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     
     // Users table
-    @$conn->query("CREATE TABLE IF NOT EXISTS users (
+    @mysqli_query($conn, "CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
         firstName VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
         email VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci UNIQUE,
@@ -58,7 +61,7 @@ function createTables($conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     
     // Projects table
-    @$conn->query("CREATE TABLE IF NOT EXISTS projects (
+    @mysqli_query($conn, "CREATE TABLE IF NOT EXISTS projects (
         id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
         name VARCHAR(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
         description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
@@ -69,7 +72,7 @@ function createTables($conn) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     
     // Tasks table
-    @$conn->query("CREATE TABLE IF NOT EXISTS tasks (
+    @mysqli_query($conn, "CREATE TABLE IF NOT EXISTS tasks (
         id VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
         projectId VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
         userId VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,

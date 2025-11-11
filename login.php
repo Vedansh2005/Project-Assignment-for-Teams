@@ -20,12 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check user credentials
     $conn = getDBConnection();
     if ($conn) {
-        $stmt = $conn->prepare("SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?");
-        $stmt->bind_param("sss", $username, $username, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $username = mysqli_real_escape_string($conn, $username);
+        $password = mysqli_real_escape_string($conn, $password);
+        $query = "SELECT * FROM users WHERE (username = '$username' OR email = '$username') AND password = '$password'";
+        $result = mysqli_query($conn, $query);
         
-        if ($user = $result->fetch_assoc()) {
+        if ($user = mysqli_fetch_assoc($result)) {
             $_SESSION['isLoggedIn'] = true;
             $_SESSION['userType'] = 'user';
             $_SESSION['username'] = $username;
@@ -35,8 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = 'Invalid username or password';
         }
-        $stmt->close();
-        $conn->close();
+        mysqli_close($conn);
     } else {
         $error = 'Database connection failed';
     }

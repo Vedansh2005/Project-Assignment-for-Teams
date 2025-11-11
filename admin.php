@@ -22,16 +22,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $progress = 0;
             $createdAt = date('Y-m-d H:i:s');
             
-            $stmt = $conn->prepare("INSERT INTO projects (id, name, description, assignedUsers, status, progress, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssiss", $id, $name, $description, $assignedUsersJson, $status, $progress, $createdAt);
+            $name = mysqli_real_escape_string($conn, $name);
+            $description = mysqli_real_escape_string($conn, $description);
+            $assignedUsersJson = mysqli_real_escape_string($conn, $assignedUsersJson);
             
-            if ($stmt->execute()) {
+            if (mysqli_query($conn, "INSERT INTO projects (id, name, description, assignedUsers, status, progress, createdAt) VALUES ('$id', '$name', '$description', '$assignedUsersJson', '$status', $progress, '$createdAt')")) {
                 $message = 'Project created successfully!';
                 $tab = 'projects';
             } else {
                 $message = 'Error creating project';
             }
-            $stmt->close();
+        }
+    }
+    
+    // Update project
+    if (isset($_POST['updateProject']) && $conn) {
+        $projectId = $_POST['projectId'] ?? '';
+        $name = $_POST['name'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $status = $_POST['status'] ?? 'active';
+        
+        if ($projectId && $name && $description) {
+            $projectId = mysqli_real_escape_string($conn, $projectId);
+            $name = mysqli_real_escape_string($conn, $name);
+            $description = mysqli_real_escape_string($conn, $description);
+            $status = mysqli_real_escape_string($conn, $status);
+            
+            if (mysqli_query($conn, "UPDATE projects SET name = '$name', description = '$description', status = '$status' WHERE id = '$projectId'")) {
+                $message = 'Project updated successfully!';
+                $tab = 'projects';
+                $action = '';
+            } else {
+                $message = 'Error updating project';
+            }
+        }
+    }
+    
+    // Delete project (with confirmation)
+    if (isset($_POST['deleteProject']) && $conn) {
+        $projectId = $_POST['projectId'] ?? '';
+        
+        if ($projectId) {
+            $projectId = mysqli_real_escape_string($conn, $projectId);
+            
+            // Delete all tasks associated with this project
+            mysqli_query($conn, "DELETE FROM tasks WHERE projectId COLLATE utf8mb4_unicode_ci = '$projectId'");
+            
+            // Remove project from all users' projects array
+            $allUsers = mysqli_query($conn, "SELECT id, projects FROM users");
+            while ($user = mysqli_fetch_assoc($allUsers)) {
+                $userProjects = json_decode($user['projects'] ?? '[]', true) ?: [];
+                $userProjects = array_values(array_filter($userProjects, function($p) use ($projectId) {
+                    return $p !== $projectId;
+                }));
+                
+                $userProjectsJson = mysqli_real_escape_string($conn, json_encode($userProjects));
+                $userId = mysqli_real_escape_string($conn, $user['id']);
+                mysqli_query($conn, "UPDATE users SET projects = '$userProjectsJson' WHERE id = '$userId'");
+            }
+            
+            // Delete the project
+            if (mysqli_query($conn, "DELETE FROM projects WHERE id = '$projectId'")) {
+                $message = 'Project deleted successfully!';
+                $tab = 'projects';
+                $action = '';
+            } else {
+                $message = 'Error deleting project';
+            }
         }
     }
     
@@ -41,14 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userIds = $_POST['userIds'] ?? [];
         
         if ($projectId && !empty($userIds)) {
-            $assignedUsersJson = json_encode($userIds);
-            $stmt = $conn->prepare("UPDATE projects SET assignedUsers = ? WHERE id = ?");
-            $stmt->bind_param("ss", $assignedUsersJson, $projectId);
-            $stmt->execute();
+            $projectIdEscaped = mysqli_real_escape_string($conn, $projectId);
+            $assignedUsersJson = mysqli_real_escape_string($conn, json_encode($userIds));
+            mysqli_query($conn, "UPDATE projects SET assignedUsers = '$assignedUsersJson' WHERE id = '$projectIdEscaped'");
             
             // Update all users
-            $allUsers = $conn->query("SELECT id, projects FROM users");
-            while ($user = $allUsers->fetch_assoc()) {
+            $allUsers = mysqli_query($conn, "SELECT id, projects FROM users");
+            while ($user = mysqli_fetch_assoc($allUsers)) {
                 $userProjects = json_decode($user['projects'] ?? '[]', true) ?: [];
                 $userProjects = array_values(array_filter($userProjects, function($p) use ($projectId) {
                     return $p !== $projectId;
@@ -60,14 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                $userProjectsJson = json_encode($userProjects);
-                $updateStmt = $conn->prepare("UPDATE users SET projects = ? WHERE id = ?");
-                $updateStmt->bind_param("ss", $userProjectsJson, $user['id']);
-                $updateStmt->execute();
-                $updateStmt->close();
+                $userProjectsJson = mysqli_real_escape_string($conn, json_encode($userProjects));
+                $userId = mysqli_real_escape_string($conn, $user['id']);
+                mysqli_query($conn, "UPDATE users SET projects = '$userProjectsJson' WHERE id = '$userId'");
             }
             
-            $stmt->close();
             $message = 'Project assigned successfully!';
             $tab = 'assign';
         }
@@ -88,18 +141,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = 'pending';
             $progress = 0;
             $createdAt = date('Y-m-d H:i:s');
-            $dueDateValue = (!empty($dueDate) && $dueDate !== 'null') ? $dueDate : null;
+            $dueDateValue = (!empty($dueDate) && $dueDate !== 'null') ? $dueDate : 'NULL';
             
-            $stmt = $conn->prepare("INSERT INTO tasks (id, projectId, userId, title, description, taskType, priority, status, progress, dueDate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssssssiss", $id, $projectId, $userId, $title, $description, $taskType, $priority, $status, $progress, $dueDateValue, $createdAt);
+            $projectId = mysqli_real_escape_string($conn, $projectId);
+            $userId = mysqli_real_escape_string($conn, $userId);
+            $title = mysqli_real_escape_string($conn, $title);
+            $description = mysqli_real_escape_string($conn, $description);
+            $taskType = mysqli_real_escape_string($conn, $taskType);
+            $priority = mysqli_real_escape_string($conn, $priority);
+            $id = mysqli_real_escape_string($conn, $id);
             
-            if ($stmt->execute()) {
+            $dueDateSql = $dueDateValue === 'NULL' ? 'NULL' : "'" . mysqli_real_escape_string($conn, $dueDateValue) . "'";
+            
+            if (mysqli_query($conn, "INSERT INTO tasks (id, projectId, userId, title, description, taskType, priority, status, progress, dueDate, createdAt) VALUES ('$id', '$projectId', '$userId', '$title', '$description', '$taskType', '$priority', '$status', $progress, $dueDateSql, '$createdAt')")) {
                 $message = 'Task created successfully!';
                 $tab = 'tasks';
             } else {
                 $message = 'Error creating task';
             }
-            $stmt->close();
         }
     }
     
@@ -114,23 +173,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($taskId) {
             $updatedAt = date('Y-m-d H:i:s');
-            $dueDateValue = (!empty($dueDate) && $dueDate !== 'null') ? $dueDate : null;
+            $dueDateValue = (!empty($dueDate) && $dueDate !== 'null') ? $dueDate : 'NULL';
             
-            $stmt = $conn->prepare("UPDATE tasks SET title = ?, description = ?, priority = ?, status = ?, dueDate = ?, updatedAt = ? WHERE id = ?");
-            $stmt->bind_param("sssssss", $title, $description, $priority, $status, $dueDateValue, $updatedAt, $taskId);
+            $taskId = mysqli_real_escape_string($conn, $taskId);
+            $title = mysqli_real_escape_string($conn, $title);
+            $description = mysqli_real_escape_string($conn, $description);
+            $priority = mysqli_real_escape_string($conn, $priority);
+            $status = mysqli_real_escape_string($conn, $status);
             
-            if ($stmt->execute()) {
+            $dueDateSql = $dueDateValue === 'NULL' ? 'NULL' : "'" . mysqli_real_escape_string($conn, $dueDateValue) . "'";
+            
+            if (mysqli_query($conn, "UPDATE tasks SET title = '$title', description = '$description', priority = '$priority', status = '$status', dueDate = $dueDateSql, updatedAt = '$updatedAt' WHERE id = '$taskId'")) {
                 $message = 'Task updated successfully!';
                 $tab = 'tasks';
                 $action = '';
             } else {
                 $message = 'Error updating task';
             }
-            $stmt->close();
         }
     }
     
-    if ($conn) $conn->close();
+    if ($conn) mysqli_close($conn);
 }
 
 // Handle delete task
@@ -139,39 +202,27 @@ if ($action === 'delete' && isset($_GET['taskId'])) {
     $conn = getDBConnection();
     if ($conn && $taskId) {
         // Get project ID before deleting
-        $stmt = $conn->prepare("SELECT projectId FROM tasks WHERE id = ?");
-        $stmt->bind_param("s", $taskId);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $taskId = mysqli_real_escape_string($conn, $taskId);
+        $result = mysqli_query($conn, "SELECT projectId FROM tasks WHERE id = '$taskId'");
         $projectId = null;
-        if ($row = $result->fetch_assoc()) {
+        if ($row = mysqli_fetch_assoc($result)) {
             $projectId = $row['projectId'];
         }
-        $stmt->close();
         
         // Delete task
-        $stmt = $conn->prepare("DELETE FROM tasks WHERE id = ?");
-        $stmt->bind_param("s", $taskId);
-        $stmt->execute();
-        $stmt->close();
+        mysqli_query($conn, "DELETE FROM tasks WHERE id = '$taskId'");
         
         // Update project progress
         if ($projectId) {
-            $avgStmt = $conn->prepare("SELECT AVG(progress) as avgProgress FROM tasks WHERE projectId = ?");
-            $avgStmt->bind_param("s", $projectId);
-            $avgStmt->execute();
-            $avgResult = $avgStmt->get_result();
-            if ($avgRow = $avgResult->fetch_assoc()) {
+            $projectId = mysqli_real_escape_string($conn, $projectId);
+            $avgResult = mysqli_query($conn, "SELECT AVG(progress) as avgProgress FROM tasks WHERE projectId = '$projectId'");
+            if ($avgRow = mysqli_fetch_assoc($avgResult)) {
                 $avgProgress = round($avgRow['avgProgress'] ?? 0);
-                $updateProjectStmt = $conn->prepare("UPDATE projects SET progress = ? WHERE id = ?");
-                $updateProjectStmt->bind_param("is", $avgProgress, $projectId);
-                $updateProjectStmt->execute();
-                $updateProjectStmt->close();
+                mysqli_query($conn, "UPDATE projects SET progress = $avgProgress WHERE id = '$projectId'");
             }
-            $avgStmt->close();
         }
         
-        $conn->close();
+        mysqli_close($conn);
         $message = 'Task deleted successfully!';
         $tab = 'tasks';
     }
@@ -183,11 +234,12 @@ $users = [];
 $projects = [];
 $tasks = [];
 $currentTask = null;
+$currentProject = null;
 
 if ($conn) {
     // Get all users
-    $result = $conn->query("SELECT id, firstName, email, gender, username, experience, skills, qualifications, projects FROM users");
-    while ($row = $result->fetch_assoc()) {
+    $result = mysqli_query($conn, "SELECT id, firstName, email, gender, username, experience, skills, qualifications, projects FROM users");
+    while ($row = mysqli_fetch_assoc($result)) {
         $row['skills'] = json_decode($row['skills'] ?? '[]', true) ?: [];
         $row['qualifications'] = json_decode($row['qualifications'] ?? '[]', true) ?: [];
         $row['projects'] = json_decode($row['projects'] ?? '[]', true) ?: [];
@@ -195,30 +247,36 @@ if ($conn) {
     }
     
     // Get all projects
-    $result = $conn->query("SELECT * FROM projects ORDER BY createdAt DESC");
-    while ($row = $result->fetch_assoc()) {
+    $result = mysqli_query($conn, "SELECT * FROM projects ORDER BY createdAt DESC");
+    while ($row = mysqli_fetch_assoc($result)) {
         $row['assignedUsers'] = json_decode($row['assignedUsers'] ?? '[]', true) ?: [];
         $projects[] = $row;
     }
     
-    // Get all tasks
-    $result = $conn->query("SELECT t.*, u.firstName, u.email, p.name as projectName FROM tasks t LEFT JOIN users u ON t.userId COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci ORDER BY t.createdAt DESC");
-    while ($row = $result->fetch_assoc()) {
+    // Get all tasks - using COLLATE to handle collation mismatch
+    $result = mysqli_query($conn, "SELECT t.*, u.firstName, u.email, p.name as projectName FROM tasks t LEFT JOIN users u ON t.userId COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci ORDER BY t.createdAt DESC");
+    while ($row = mysqli_fetch_assoc($result)) {
         $tasks[] = $row;
     }
     
     // Get task for editing
     if ($action === 'edit' && isset($_GET['taskId'])) {
-        $taskId = $_GET['taskId'];
-        $stmt = $conn->prepare("SELECT * FROM tasks WHERE id = ?");
-        $stmt->bind_param("s", $taskId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $currentTask = $result->fetch_assoc();
-        $stmt->close();
+        $taskId = mysqli_real_escape_string($conn, $_GET['taskId']);
+        $result = mysqli_query($conn, "SELECT * FROM tasks WHERE id = '$taskId'");
+        $currentTask = mysqli_fetch_assoc($result);
     }
     
-    $conn->close();
+    // Get project for editing
+    if ($action === 'edit' && isset($_GET['projectId'])) {
+        $projectId = mysqli_real_escape_string($conn, $_GET['projectId']);
+        $result = mysqli_query($conn, "SELECT * FROM projects WHERE id = '$projectId'");
+        $currentProject = mysqli_fetch_assoc($result);
+        if ($currentProject) {
+            $currentProject['assignedUsers'] = json_decode($currentProject['assignedUsers'] ?? '[]', true) ?: [];
+        }
+    }
+    
+    mysqli_close($conn);
 }
 
 // Count tasks per user
@@ -332,20 +390,46 @@ foreach ($tasks as $task) {
     <?php elseif ($tab === 'projects'): ?>
     <div class="card">
       <h2>Projects</h2>
-      <?php if ($action === 'create'): ?>
+      <?php if ($action === 'create' || ($action === 'edit' && $currentProject)): ?>
         <div class="form-container">
-          <h3>Create New Project</h3>
+          <h3><?php echo $action === 'create' ? 'Create New Project' : 'Edit Project'; ?></h3>
           <form method="POST" action="admin.php?tab=projects">
-            <input type="hidden" name="createProject" value="1">
+            <?php if ($action === 'edit'): ?>
+              <input type="hidden" name="updateProject" value="1">
+              <input type="hidden" name="projectId" value="<?php echo htmlspecialchars($currentProject['id']); ?>">
+            <?php else: ?>
+              <input type="hidden" name="createProject" value="1">
+            <?php endif; ?>
             <div class="form-group">
               <label>Project Name</label>
-              <input type="text" name="name" required>
+              <input type="text" name="name" value="<?php echo htmlspecialchars($currentProject['name'] ?? ''); ?>" required>
             </div>
             <div class="form-group">
               <label>Description</label>
-              <textarea name="description" rows="5" required></textarea>
+              <textarea name="description" rows="5" required><?php echo htmlspecialchars($currentProject['description'] ?? ''); ?></textarea>
             </div>
-            <button type="submit" class="btn">Create Project</button>
+            <?php if ($action === 'edit'): ?>
+            <div class="form-group">
+              <label>Status</label>
+              <select name="status">
+                <option value="active" <?php echo (($currentProject['status'] ?? 'active') === 'active') ? 'selected' : ''; ?>>Active</option>
+                <option value="completed" <?php echo (($currentProject['status'] ?? 'active') === 'completed') ? 'selected' : ''; ?>>Completed</option>
+                <option value="on_hold" <?php echo (($currentProject['status'] ?? 'active') === 'on_hold') ? 'selected' : ''; ?>>On Hold</option>
+              </select>
+            </div>
+            <?php endif; ?>
+            <button type="submit" class="btn"><?php echo $action === 'create' ? 'Create Project' : 'Update Project'; ?></button>
+            <a href="admin.php?tab=projects" class="btn" style="background-color: #666; text-decoration: none; display: inline-block; margin-left: 10px;">Cancel</a>
+          </form>
+        </div>
+      <?php elseif ($action === 'delete' && isset($_GET['projectId'])): ?>
+        <div class="form-container">
+          <h3>Delete Project</h3>
+          <p>Are you sure you want to delete this project? This will also delete all associated tasks and remove the project from all users.</p>
+          <form method="POST" action="admin.php?tab=projects">
+            <input type="hidden" name="deleteProject" value="1">
+            <input type="hidden" name="projectId" value="<?php echo htmlspecialchars($_GET['projectId']); ?>">
+            <button type="submit" class="btn" style="background-color: #dc2626;">Yes, Delete Project</button>
             <a href="admin.php?tab=projects" class="btn" style="background-color: #666; text-decoration: none; display: inline-block; margin-left: 10px;">Cancel</a>
           </form>
         </div>
@@ -362,7 +446,11 @@ foreach ($tasks as $task) {
                 <p><strong>Status:</strong> <?php echo htmlspecialchars($project['status']); ?></p>
                 <p><strong>Progress:</strong> <?php echo htmlspecialchars($project['progress']); ?>%</p>
                 <p><strong>Assigned Users:</strong> <?php echo count($project['assignedUsers']); ?></p>
-                <a href="admin.php?tab=assign&projectId=<?php echo htmlspecialchars($project['id']); ?>" class="btn" style="margin-top: 10px;">Assign Users</a>
+                <div style="margin-top: 10px;">
+                  <a href="admin.php?tab=assign&projectId=<?php echo htmlspecialchars($project['id']); ?>" class="btn" style="margin-right: 5px;">Assign Users</a>
+                  <a href="admin.php?tab=projects&action=edit&projectId=<?php echo htmlspecialchars($project['id']); ?>" class="btn" style="background-color: #0ea5e9; margin-right: 5px;">Edit</a>
+                  <a href="admin.php?tab=projects&action=delete&projectId=<?php echo htmlspecialchars($project['id']); ?>" class="btn" style="background-color: #dc2626;">Delete</a>
+                </div>
               </div>
             <?php endforeach; ?>
           </div>

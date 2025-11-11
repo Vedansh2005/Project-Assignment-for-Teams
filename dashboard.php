@@ -19,34 +19,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($conn) {
                 $status = $progress == 100 ? 'completed' : ($progress > 0 ? 'in_progress' : 'pending');
                 $updatedAt = date('Y-m-d H:i:s');
+                $taskId = mysqli_real_escape_string($conn, $taskId);
                 
-                $stmt = $conn->prepare("UPDATE tasks SET progress = ?, status = ?, updatedAt = ? WHERE id = ?");
-                $stmt->bind_param("isss", $progress, $status, $updatedAt, $taskId);
-                $stmt->execute();
+                mysqli_query($conn, "UPDATE tasks SET progress = $progress, status = '$status', updatedAt = '$updatedAt' WHERE id = '$taskId'");
                 
                 // Update project progress
-                $stmt2 = $conn->prepare("SELECT projectId FROM tasks WHERE id = ?");
-                $stmt2->bind_param("s", $taskId);
-                $stmt2->execute();
-                $result = $stmt2->get_result();
-                if ($row = $result->fetch_assoc()) {
-                    $projectId = $row['projectId'];
-                    $avgStmt = $conn->prepare("SELECT AVG(progress) as avgProgress FROM tasks WHERE projectId = ?");
-                    $avgStmt->bind_param("s", $projectId);
-                    $avgStmt->execute();
-                    $avgResult = $avgStmt->get_result();
-                    if ($avgRow = $avgResult->fetch_assoc()) {
+                $result = mysqli_query($conn, "SELECT projectId FROM tasks WHERE id = '$taskId'");
+                if ($row = mysqli_fetch_assoc($result)) {
+                    $projectId = mysqli_real_escape_string($conn, $row['projectId']);
+                    $avgResult = mysqli_query($conn, "SELECT AVG(progress) as avgProgress FROM tasks WHERE projectId = '$projectId'");
+                    if ($avgRow = mysqli_fetch_assoc($avgResult)) {
                         $avgProgress = round($avgRow['avgProgress'] ?? 0);
-                        $updateProjectStmt = $conn->prepare("UPDATE projects SET progress = ? WHERE id = ?");
-                        $updateProjectStmt->bind_param("is", $avgProgress, $projectId);
-                        $updateProjectStmt->execute();
-                        $updateProjectStmt->close();
+                        mysqli_query($conn, "UPDATE projects SET progress = $avgProgress WHERE id = '$projectId'");
                     }
-                    $avgStmt->close();
                 }
-                $stmt2->close();
-                $stmt->close();
-                $conn->close();
+                mysqli_close($conn);
                 $message = 'Task progress updated!';
             }
         }
@@ -68,20 +55,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qualificationsArray = array_map('trim', $qualificationsArray);
             $qualificationsArray = array_filter($qualificationsArray);
             
-            $skillsJson = json_encode($skillsArray);
-            $qualificationsJson = json_encode($qualificationsArray);
+            $skillsJson = mysqli_real_escape_string($conn, json_encode($skillsArray));
+            $qualificationsJson = mysqli_real_escape_string($conn, json_encode($qualificationsArray));
+            $experience = mysqli_real_escape_string($conn, $experience);
+            $userId = mysqli_real_escape_string($conn, $userId);
             
-            $stmt = $conn->prepare("UPDATE users SET experience = ?, skills = ?, qualifications = ? WHERE id = ?");
-            $stmt->bind_param("ssss", $experience, $skillsJson, $qualificationsJson, $userId);
-            
-            if ($stmt->execute()) {
+            if (mysqli_query($conn, "UPDATE users SET experience = '$experience', skills = '$skillsJson', qualifications = '$qualificationsJson' WHERE id = '$userId'")) {
                 $message = 'Profile updated successfully!';
                 $showEditForm = false;
             } else {
                 $message = 'Error updating profile';
             }
-            $stmt->close();
-            $conn->close();
+            mysqli_close($conn);
         }
     }
 }
@@ -95,54 +80,42 @@ $allProjectTasks = [];
 
 if ($conn && $userId) {
     // Get user
-    $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->bind_param("s", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $user = $result->fetch_assoc();
+    $userId = mysqli_real_escape_string($conn, $userId);
+    $result = mysqli_query($conn, "SELECT * FROM users WHERE id = '$userId'");
+    $user = mysqli_fetch_assoc($result);
     if ($user) {
         $user['skills'] = json_decode($user['skills'] ?? '[]', true) ?: [];
         $user['qualifications'] = json_decode($user['qualifications'] ?? '[]', true) ?: [];
         $user['projects'] = json_decode($user['projects'] ?? '[]', true) ?: [];
     }
-    $stmt->close();
     
-    // Get user's tasks
-    $stmt = $conn->prepare("SELECT t.*, p.name as projectName FROM tasks t LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci WHERE t.userId COLLATE utf8mb4_unicode_ci = ? ORDER BY t.createdAt DESC");
-    $stmt->bind_param("s", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
+    // Get user's tasks - using COLLATE to handle collation mismatch
+    $result = mysqli_query($conn, "SELECT t.*, p.name as projectName FROM tasks t LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci WHERE t.userId COLLATE utf8mb4_unicode_ci = '$userId' ORDER BY t.createdAt DESC");
+    while ($row = mysqli_fetch_assoc($result)) {
         $tasks[] = $row;
     }
-    $stmt->close();
     
     // Get user's projects
     if ($user && !empty($user['projects'])) {
-        $projectIds = $user['projects'];
-        $placeholders = str_repeat('?,', count($projectIds) - 1) . '?';
-        $stmt = $conn->prepare("SELECT * FROM projects WHERE id IN ($placeholders)");
-        $stmt->bind_param(str_repeat('s', count($projectIds)), ...$projectIds);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
+        $projectIds = array_map(function($id) use ($conn) {
+            return "'" . mysqli_real_escape_string($conn, $id) . "'";
+        }, $user['projects']);
+        $projectIdsStr = implode(',', $projectIds);
+        
+        $result = mysqli_query($conn, "SELECT * FROM projects WHERE id IN ($projectIdsStr)");
+        while ($row = mysqli_fetch_assoc($result)) {
             $row['assignedUsers'] = json_decode($row['assignedUsers'] ?? '[]', true) ?: [];
             $projects[] = $row;
         }
-        $stmt->close();
         
-        // Get all tasks for user's projects
-        $stmt = $conn->prepare("SELECT t.*, u.firstName, u.email, p.name as projectName FROM tasks t LEFT JOIN users u ON t.userId COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci WHERE t.projectId COLLATE utf8mb4_unicode_ci IN ($placeholders) ORDER BY t.createdAt DESC");
-        $stmt->bind_param(str_repeat('s', count($projectIds)), ...$projectIds);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
+        // Get all tasks for user's projects - using COLLATE to handle collation mismatch
+        $result = mysqli_query($conn, "SELECT t.*, u.firstName, u.email, p.name as projectName FROM tasks t LEFT JOIN users u ON t.userId COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci LEFT JOIN projects p ON t.projectId COLLATE utf8mb4_unicode_ci = p.id COLLATE utf8mb4_unicode_ci WHERE t.projectId IN ($projectIdsStr) ORDER BY t.createdAt DESC");
+        while ($row = mysqli_fetch_assoc($result)) {
             $allProjectTasks[] = $row;
         }
-        $stmt->close();
     }
     
-    $conn->close();
+    mysqli_close($conn);
 }
 
 // Calculate progress stats
