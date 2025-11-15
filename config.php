@@ -16,10 +16,43 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Database connection
 function getDBConnection() {
-    $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    // Set connection timeout options BEFORE connecting
+    $options = array(
+        MYSQLI_OPT_CONNECT_TIMEOUT => 5,
+        MYSQLI_OPT_READ_TIMEOUT => 5
+    );
+    
+    // Try to connect to existing database first
+    $conn = mysqli_init();
+    if ($conn) {
+        foreach ($options as $key => $value) {
+            mysqli_options($conn, $key, $value);
+        }
+        $connected = @mysqli_real_connect($conn, DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if (!$connected) {
+            mysqli_close($conn);
+            $conn = null;
+        }
+    } else {
+        $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    }
+    
     if (!$conn || mysqli_connect_error()) {
         // Try to create database if it doesn't exist
-        $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS);
+        $conn = mysqli_init();
+        if ($conn) {
+            foreach ($options as $key => $value) {
+                mysqli_options($conn, $key, $value);
+            }
+            $connected = @mysqli_real_connect($conn, DB_HOST, DB_USER, DB_PASS);
+            if (!$connected) {
+                mysqli_close($conn);
+                $conn = null;
+            }
+        } else {
+            $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS);
+        }
+        
         if ($conn) {
             @mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS " . DB_NAME . " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             @mysqli_select_db($conn, DB_NAME);
@@ -33,7 +66,12 @@ function getDBConnection() {
         // Set charset and collation for connection
         @mysqli_set_charset($conn, "utf8mb4");
         @mysqli_query($conn, "SET collation_connection = 'utf8mb4_unicode_ci'");
-        createTables($conn);
+        // Only create tables if they don't exist (check once per request)
+        static $tablesCreated = false;
+        if (!$tablesCreated) {
+            createTables($conn);
+            $tablesCreated = true;
+        }
     }
     return $conn;
 }

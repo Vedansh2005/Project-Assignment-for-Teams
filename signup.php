@@ -105,6 +105,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       margin-bottom: 15px;
       display: <?php echo $success ? 'block' : 'none'; ?>;
     }
+    .error-message {
+      color: #dc2626;
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
+    }
     .links {
       text-align: center;
       margin-top: 20px;
@@ -129,14 +135,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
     <?php else: ?>
     
-    <form method="POST" action="signup.php">
+    <form method="POST" action="signup.php" id="signupForm" onsubmit="return validateSignupForm();">
       <div class="form-group">
         <label>First Name</label>
         <input type="text" name="firstName" required>
+        <span id="firstNameError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Email</label>
         <input type="email" name="email" required>
+        <span id="emailError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Gender</label>
@@ -146,14 +154,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <option value="Female">Female</option>
           <option value="Other">Other</option>
         </select>
+        <span id="genderError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Experience (in years)</label>
         <input type="number" name="experience" min="0" value="0">
+        <span id="experienceError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Skills (comma separated, e.g., PHP, JavaScript, MySQL)</label>
         <input type="text" name="skills" placeholder="PHP, JavaScript, MySQL">
+        <span id="skillsError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Qualifications (one per line)</label>
@@ -162,10 +173,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="form-group">
         <label>Password</label>
         <input type="password" name="password" required minlength="6">
+        <span id="passwordError" class="error-message"></span>
       </div>
       <div class="form-group">
         <label>Confirm Password</label>
         <input type="password" name="confirmPassword" required>
+        <span id="confirmPasswordError" class="error-message"></span>
       </div>
       <button type="submit" class="btn" style="width: 100%;">Create Account</button>
     </form>
@@ -177,6 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <p><a href="index.html">Back to Home</a></p>
     </div>
   </div>
+  <script src="js/app.js"></script>
 </body>
 </html>
 
